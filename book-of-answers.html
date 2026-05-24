@@ -1,0 +1,1498 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Oracle | Deck of Answers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #030305;
+  --glass: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --text-main: #f0f0f0;
+  --text-muted: #555555;
+  --silver: #eeeeee;
+  --core-glow: rgba(200, 210, 255, 0.15);
+  --gold: #d4af37;
+  --crimson: #e63946;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 全屏粒子背景 ── */
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── 卡片 3D 反光图层 ── */
+.card-glare {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: overlay;
+  border-radius: 16px;
+}
+
+/* ── 刻入命运（分享按钮）── */
+.share-btn {
+  margin-top: 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0.7rem 1.4rem;
+  font-size: 0.8rem;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0;
+  transform: translateY(15px);
+}
+.share-btn.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.share-btn:hover {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.serif { font-family: 'Cormorant Garamond', serif; }
+
+/* ── AMBIENT AURORA ── */
+.aurora {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(20, 25, 40, 0.8) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(15, 20, 30, 0.8) 0%, transparent 40%);
+  filter: blur(80px);
+  animation: drift 25s infinite alternate linear;
+}
+
+@keyframes drift {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.1) translate(-20px, 20px); }
+}
+
+/* ── LAYOUT ── */
+.app {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2.5rem;
+  padding: 2rem 1.5rem 4rem;
+  width: 100%; max-width: 600px;
+}
+
+/* ── HEADER ── */
+.hd-title {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 300;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em; 
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255,255,255,0.2);
+}
+.hd-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  text-align: center;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 1rem;
+}
+
+/* ── INPUT ROW & ERROR SHAKE ── */
+.input-row { width: 100%; max-width: 400px; margin-top: 1rem; position: relative; z-index: 10;}
+.q-inp {
+  width: 100%; padding: 12px 0;
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--glass-border);
+  color: #fff; font-size: 1.3rem; text-align: center;
+  outline: none; transition: all 0.4s ease;
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+}
+.q-inp::placeholder { color: #333; }
+.q-inp:focus { border-bottom-color: rgba(255,255,255,0.4); text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+.error-shake {
+  animation: error-shake 0.4s ease;
+  border-bottom-color: var(--crimson) !important;
+  color: var(--crimson);
+}
+
+/* ── HAPTIC HOLD BUTTON ── */
+.hold-wrap { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin-top: 1.5rem; z-index: 10; touch-action: none;}
+.hold-btn {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; letter-spacing: 0.25em; text-indent: 0.25em; text-align: center;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  backdrop-filter: blur(10px);
+  z-index: 2;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+}
+.hold-wrap:hover .hold-btn {
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: 0 0 40px var(--core-glow);
+}
+.hold-ring {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: #fff; border-right-color: rgba(255,255,255,0.5);
+  opacity: 0; transform: rotate(0deg);
+  transition: opacity 0.3s;
+  z-index: 1; pointer-events: none;
+}
+.holding .hold-ring { opacity: 1; animation: spin-fill 2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+@keyframes spin-fill { 0% { transform: rotate(0deg) scale(0.9); border-width: 1px; } 100% { transform: rotate(720deg) scale(1.1); border-width: 3px; border-top-color: #fff; border-right-color: #fff; border-bottom-color: #fff; border-left-color: #fff; box-shadow: 0 0 20px #fff; } }
+.holding .hold-btn { transform: scale(0.85); background: rgba(255,255,255,0.1); color: #fff; box-shadow: 0 0 50px rgba(255,255,255,0.2); }
+
+/* ── 3D POKER DECK (Idle view) ── */
+.deck-scene { position: relative; perspective: 1200px; margin: 1rem 0; width: 160px; height: 230px;}
+.deck {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateY(-18deg) rotateX(15deg);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.holding .deck {
+  animation: card-spin 0.4s linear infinite;
+}
+@keyframes card-spin {
+  0% { transform: translateY(-15px) rotateY(0deg) rotateX(10deg); }
+  100% { transform: translateY(-15px) rotateY(360deg) rotateX(10deg); }
+}
+
+.d-face { position: absolute; inset: 0; border-radius: 8px; backface-visibility: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.8); }
+.d-front { background: #08080a; border: 1px solid rgba(255,255,255,0.05); transform: rotateY(180deg); }
+.d-back { background: repeating-linear-gradient(45deg, #0e0e12, #0e0e12 6px, #16161b 6px, #16161b 12px); border: 2px solid #2a2a35; display: flex; align-items: center; justify-content: center; }
+.d-back::after { content: '✥'; font-size: 3rem; color: #2a2a35; }
+.d-layer { position: absolute; inset: 0; background: #fff; border-radius: 8px; transform: translateZ(-1px); }
+.d-layer:nth-child(2) { transform: translateZ(-2px); background: #ddd; }
+.d-layer:nth-child(3) { transform: translateZ(-3px); background: #bbb; }
+
+/* ── FULLSCREEN RESULT VIEW ── */
+.result-wrap {
+  position: fixed; inset: 0;
+  background: rgba(3, 3, 5, 0.95);
+  backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+}
+.result-wrap.on { opacity: 1; pointer-events: all; }
+
+.result-card-stage { perspective: 2000px; width: min(90vw, 360px); height: min(135vw, 540px); }
+.res-card {
+  width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+  transform: rotateY(-180deg) scale(0.6) translateY(50px);
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.1, 1);
+}
+.result-wrap.on .res-card { transform: rotateY(0deg) scale(1) translateY(0); }
+
+.r-face { position: absolute; inset: 0; border-radius: 16px; backface-visibility: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 100px rgba(255,255,255,0.03); }
+.r-back { background: repeating-linear-gradient(45deg, #0e0e12, #0e0e12 8px, #16161b 8px, #16161b 16px); border: 2px solid #2a2a35; transform: rotateY(-180deg); display: flex; align-items: center; justify-content: center; }
+.r-back::after { content: '✥'; font-size: 5rem; color: #2a2a35; }
+.r-front {
+  background: #0d0d10; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; padding: 1.5rem;
+  background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)" opacity="0.04"/%3E%3C/svg%3E');
+}
+
+.c-suit-top, .c-suit-bot { position: absolute; font-family: 'Montserrat', sans-serif; font-weight: 500; font-size: 1.8rem; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.c-suit-top { top: 1.2rem; left: 1.2rem; }
+.c-suit-bot { bottom: 1.2rem; right: 1.2rem; transform: rotate(180deg); }
+.suit-val { font-size: 1.6rem; letter-spacing: -1px; }
+.suit-icon { font-size: 1.4rem; margin-top: 4px; }
+.c-red { color: var(--crimson); text-shadow: 0 0 15px rgba(230,57,70,0.4); }
+.c-gold { color: var(--gold); text-shadow: 0 0 15px rgba(212,175,55,0.4); }
+
+.ans-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 2; padding: 2.5rem; text-align: center; }
+.bg-suit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14rem; opacity: 0.03; pointer-events: none; z-index: -1; }
+.ans-q { color: rgba(255,255,255,0.3); font-size: 0.95rem; font-style: italic; margin-bottom: 2rem; letter-spacing: 0.05em; font-family: 'Cormorant Garamond', serif;}
+.ans-txt { color: var(--silver); font-size: clamp(1.6rem, 5vw, 2rem); line-height: 1.4; font-weight: 400; font-family: 'Cormorant Garamond', serif; text-shadow: 0 0 20px rgba(255,255,255,0.15); min-height: 4.2em; display: flex; align-items: center; justify-content: center; }
+
+.close-hint { font-size: 0.65rem; color: #444; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0; transition: opacity 1s ease 1s; padding-top: 5px; text-align: center;}
+.result-wrap.on .close-hint { opacity: 1; }
+.flash { position: fixed; inset: 0; background: #fff; pointer-events: none; z-index: 300; opacity: 0; }
+@keyframes flash-strobe { 0%{opacity: 0;} 10%{opacity: 0.25;} 100%{opacity: 0;} }
+.flash.active { animation: flash-strobe 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* ── HISTORY PANEL ── */
+.btn-history {
+  position: absolute; top: 1.5rem; right: 1.5rem;
+  color: var(--text-muted); cursor: pointer; z-index: 50;
+  font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+  transition: color 0.3s;
+}
+.btn-history:hover { color: #fff; }
+
+.history-panel {
+  position: fixed; right: -100%; top: 0; bottom: 0;
+  width: min(400px, 100vw);
+  background: rgba(8, 8, 12, 0.98);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid var(--glass-border);
+  z-index: 200;
+  transition: right 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: flex; flex-direction: column;
+}
+.history-panel.open { right: 0; }
+.hist-header {
+  padding: 2rem 1.5rem 1rem; border-bottom: 1px solid var(--glass-border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.hist-title { font-size: 1.2rem; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; }
+.close-hist { font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: 0.3s; }
+.close-hist:hover { color: #fff; }
+.hist-list { flex: 1; overflow-y: auto; padding: 0 1.5rem; }
+.hist-item { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1.5rem 0; display: flex; gap: 1rem; }
+.hist-card-mini { 
+  min-width: 40px; height: 56px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem;
+  background: #0d0d10; font-family: 'Montserrat', sans-serif; font-weight: 500;
+}
+.hist-content { flex: 1; }
+.hist-q { font-size: 0.85rem; color: rgba(255,255,255,0.4); font-style: italic; margin-bottom: 0.5rem; font-family: 'Cormorant Garamond', serif;}
+.hist-a { font-size: 1.1rem; color: var(--silver); font-family: 'Cormorant Garamond', serif; }
+.hist-time { font-size: 0.6rem; color: #555; margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.hist-empty { text-align: center; color: var(--text-muted); margin-top: 3rem; font-style: italic; font-size: 0.9rem; }
+
+@media (max-width: 540px) {
+  .app { padding-top: 3.5rem; gap: 2rem; }
+  .hd-title { font-size: 2.2rem; }
+  .deck-scene { width: 140px; height: 200px; }
+  .result-card-stage { width: 85vw; height: 127vw; max-height: 68vh; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<div class="aurora"></div>
+
+<div class="btn-history" onclick="toggleHistory(true)">Archive</div>
+
+<div class="app">
+  <header>
+    <div class="hd-title serif">The Oracle</div>
+    <div class="hd-sub">Seek & You Shall Find</div>
+  </header>
+
+  <div class="deck-scene">
+    <div class="deck" id="deck">
+      <div class="d-layer"></div>
+      <div class="d-layer"></div>
+      <div class="d-layer"></div>
+      <div class="d-face d-front"></div>
+      <div class="d-face d-back"></div>
+    </div>
+  </div>
+
+  <div class="input-row">
+    <input class="q-inp" id="q-inp" type="text" placeholder="Hold your question in mind..." maxlength="120" autocomplete="off">
+  </div>
+
+  <div class="hold-wrap" id="hold-wrap" 
+       onmousedown="startHold(event)" onmouseup="cancelHold(event)" onmouseleave="cancelHold(event)"
+       ontouchstart="startHold(event)" ontouchend="cancelHold(event)" ontouchcancel="cancelHold(event)">
+    <div class="hold-ring"></div>
+    <div class="hold-btn">PRESS</div>
+  </div>
+
+</div>
+
+<div class="result-wrap" id="result-wrap" onclick="closeResult()">
+  <div class="result-card-stage" onclick="event.stopPropagation()">
+    <div class="res-card" id="res-card">
+      <div class="r-face r-back"></div>
+      <div class="r-face r-front"></div>
+    </div>
+  </div>
+  <div class="sharing-controls" onclick="event.stopPropagation()">
+    <button id="share-btn" class="share-btn" onclick="exportCard(event)">[ INSCRIBE DESTINY / 刻入命运 ]</button>
+    <div class="close-hint">Click background to return</div>
+  </div>
+</div>
+<div class="flash" id="flash"></div>
+
+<div class="history-panel" id="history-panel">
+  <div class="hist-header">
+    <div class="hist-title serif">The Archive</div>
+    <div class="close-hist" onclick="toggleHistory(false)">×</div>
+  </div>
+  <div class="hist-list" id="hist-list"></div>
+</div>
+
+<script>
+const A_EN = [
+  "Yes. But patience is required.",
+  "No. It will make sense later.",
+  "The timing is odd, not wrong.",
+  "Seek counsel, not permission.",
+  "Take the long road; it fits you.",
+  "Let it shatter, then rebuild.",
+  "Luck favors the prepared mind.",
+  "The door stands unlocked.",
+  "Uncertainty is your ally today.",
+  "A single step alters the horizon.",
+  "Observe the silence. It speaks.",
+  "No rush. The tide will carry you.",
+  "Yes, provided you stop thinking.",
+  "No, unless terms change.",
+  "Embrace the echo.",
+  "You already hold the key.",
+  "Sleep on it. The dawn knows.",
+  "Action dissolves the shadow.",
+  "Subtle shifts yield massive weight.",
+  "It is merely a detour.",
+  "Speak less. Observe more.",
+  "Perfection is a myth. Proceed.",
+  "Trust the quiet whisper within.",
+  "Empty your cup first.",
+  "Ask the mirror, not the oracle.",
+  "Release your grip. Let it fall.",
+  "Not a denial, merely a delay.",
+  "Breathe before you leap.",
+  "Time will vindicate this choice.",
+  "Show courage, then show grace.",
+  "It is a lesson clad in armor.",
+  "Choose the steepest path.",
+  "A quiet 'yes' moves mountains.",
+  "A gentle 'no' builds a fortress.",
+  "You are closer than you realize.",
+  "Cease explaining. Begin executing.",
+  "The risk is an illusion.",
+  "Do not bare this burden alone.",
+  "Leave a margin for miracles.",
+  "It is the prologue, not the end.",
+  "Attempt it once, with absolute truth.",
+  "In time, this will bring a smile.",
+  "If it drains you, drop it.",
+  "Clarity follows momentum.",
+  "Trade flawless for finished.",
+  "The mirror reflects the future, not the present.",
+  "Water remembers every shape it took.",
+  "A locked drawer keeps no secrets from a crow.",
+  "The gold is real; the map is a lie.",
+  "Walk backward into the light.",
+  "The thread is thin, but it holds.",
+  "An anchor is only useful if you drop it.",
+  "The clock is ticking counter-clockwise today.",
+  "A ghost from yesterday is blocking the door.",
+  "The compass points to what you fear.",
+  "Burn the bridge. The swim will wake you up.",
+  "Words are cheap; silence is unaffordable.",
+  "The key grew larger than the lock.",
+  "Shadows don't lie, but they exaggerate.",
+  "Sip the tea before it turns into ice.",
+  "A paper crane cannot fly in the rain.",
+  "The mountain did not move; you simply grew taller.",
+  "A blind man saw your true colors.",
+  "The ink is still wet on your destiny.",
+  "Do not bargain with the wind.",
+  "The roots know more than the branches.",
+  "A broken compass still tells a story.",
+  "The snake shed its skin; why haven't you?",
+  "A mask is just another face.",
+  "The cage was open the whole time.",
+  "Gold leaf hides a hollow core.",
+  "The labyrinth has only one exit: upward.",
+  "An old key opens a new door.",
+  "The static on the radio is an answer.",
+  "A falling leaf never apologizes to the tree.",
+  "The wolf is at the door, but he is hungry for truth.",
+  "A candle loses nothing by lighting another.",
+  "The storm is an invitation.",
+  "Iron sharpens iron; friction breeds fire.",
+  "The river does not argue with the rock.",
+  "A single match can blind the dark.",
+  "The echo arrives before the sound.",
+  "The trap is beautifully disguised as comfort.",
+  "A heavy crown causes a headache.",
+  "The ice is thick enough to dance on.",
+  "The map was drawn by someone who got lost.",
+  "A whisper can shatter a frozen glass.",
+  "The ocean does not care about your tea party.",
+  "A hidden staircase awaits behind the clock.",
+  "The puzzle is missing a piece on purpose.",
+  "The dust will settle exactly where it belongs.",
+  "A bird in the cage sings of the sky.",
+  "The shadow of a doubt is still a shadow.",
+  "The salt in the wound is a clean pain.",
+  "A secret shared is a weapon gifted.",
+  "The crown belongs to the one who survives the night.",
+  "A drop of poison ruins the whole well.",
+  "The blind spot is where the magic lives.",
+  "A broken mirror gives a thousand faces.",
+  "The fire died, but the ash is still warm.",
+  "A closed book keeps its monsters inside.",
+  "The horizon is an illusion of geometry.",
+  "A quiet room holds the heaviest weight.",
+  "The spider waits; patience is a web.",
+  "A white lie casts a gray shadow.",
+  "The wheel turns, regardless of the passenger.",
+  "A sudden draft means a door just shut.",
+  "The soil remembers the seed.",
+  "A silver tongue requires a golden heart.",
+  "The storm passed, but the sea is still angry.",
+  "A leap of faith has no safety net.",
+  "The blueprint was altered while you slept.",
+  "A single drop can overflow the cup.",
+  "The phantom pain means you are healing.",
+  "A loose brick reveals a hidden vault.",
+  "The code is elegant, but the logic is broken.",
+  "A forgotten promise blooms into a weed.",
+  "The current is strong; stop rowing.",
+  "A sharp corner cuts the wind.",
+  "The masterpiece was painted over.",
+  "A hollow victory smells like ash.",
+  "The truth is a shape-shifter.",
+  "A frozen waterfall still holds power.",
+  "The bell tolled for someone else; ignore it.",
+  "A wild card changes the entire deck.",
+  "The static holds a hidden frequency.",
+  "A smooth stone was shaped by rough waves.",
+  "The prophecy was mistranslated.",
+  "A flickering bulb is a warning sign.",
+  "The foundation is solid; the roof is burning.",
+  "A double-edged sword demands a steady hand.",
+  "The night is young, but the oracle is old.",
+  "A strange dog followed you home for a reason.",
+  "The silence after the applause is the truth.",
+  "A golden cage is still a cage.",
+  "The ink bled through the page.",
+  "A sharp wit leaves no scar.",
+  "The tide left a treasure on the sand.",
+  "A cold shoulder is warmer than a fake smile.",
+  "The algorithm cannot predict your next mistake.",
+  "A heavy sigh weighs more than a stone.",
+  "The lighthouse is dark tonight.",
+  "A random stranger has the missing piece.",
+  "The target moved while you aimed.",
+  "A quiet storm is the most dangerous kind.",
+  "The roots are thirsty; stop watering the leaves.",
+  "A broken clock is right twice; wait for it.",
+  "The velvet glove hides an iron fist.",
+  "A small spark can trigger a revolution.",
+  "The riddle has three answers, choose none.",
+  "A bitter pill guarantees a sweet recovery.",
+  "The curtain is about to rise.",
+  "A loose thread can unravel a kingdom.",
+  "The deep end is safer than the shallow side.",
+  "A warm breeze brings a cold memory.",
+  "The path is overgrown; bring a machete.",
+  "A subtle hint is louder than a scream.",
+  "The destination changed during the journey.",
+  "A slow fuse leads to a massive blast.",
+  "The writing on the wall is in a dead language.",
+  "A clean slate requires an eraser.",
+  "The first impression was a well-staged lie.",
+  "A heavy fog hides the cliff.",
+  "The pendulum swung too far this time.",
+  "A quiet nod is better than a loud oath.",
+  "The second choice was the right one.",
+  "A small leak sinks a great ship.",
+  "The stage is set, but the actors ran away.",
+  "A rare coin bought a cheap secret.",
+  "The memory is softer than the reality.",
+  "A sharp turn lies ahead; check your brakes.",
+  "The oracle suggests an early bedtime.",
+  "A sudden pause means the trap is set.",
+  "The view from the top is incredibly lonely.",
+  "A broken string ruined the melody.",
+  "The truth hurts; an illusion kills.",
+  "A blind leap landed on soft grass.",
+  "The dice are loaded; play anyway.",
+  "A shadow followed you into the light.",
+  "The last page was torn out.",
+  "A quiet life is a luxury.",
+  "The signal is weak; step outside.",
+  "A heavy coat won't protect a fragile heart.",
+  "The rumor is ninety percent accurate.",
+  "A clean cut heals faster.",
+  "The masterpiece is invisible to the crowd.",
+  "A sudden spark lit the entire forest.",
+  "The third time is a charm, or a curse.",
+  "A wild guess is better than a structured lie.",
+  "The answer is yes, but only on Tuesdays.",
+  "A cold rain will clear your mind.",
+  "The whisper in the dark was just the wind.",
+  "A golden key can open a wooden heart.",
+  "The riddle solves itself if you stop looking.",
+  "A dark horse enters the race.",
+  "The logic is flawless; the premise is insane.",
+  "A quiet compromise saved the day.",
+  "The secret ingredient is just ordinary salt.",
+  "A sudden shift in wind changes everything.",
+  "The reflection in the water is moving.",
+  "A broken vase can be glued, but it leaks.",
+  "The oracle is sleeping; ask your intuition.",
+  "A bitter enemy will tell you the truth.",
+  "The first step was the hardest; the rest is gravity.",
+  "A small dose of chaos keeps you alive.",
+  "The stars aligned, but for a different person.",
+  "A closed mouth catches no flies.",
+  "The echo is sweeter than the voice.",
+  "A raw deal can still turn a profit.",
+  "The pattern repeats every seven years.",
+  "A sharp blade requires a gentle touch.",
+  "The light at the end is a train; dodge.",
+  "A quiet corner is a fortress.",
+  "The truth is wearing a disguise today.",
+  "A loose screw makes the machine interesting.",
+  "The second wave will be bigger.",
+  "A cheap ticket leads to an expensive journey.",
+  "The memory fades, but the scar remains.",
+  "A sudden laugh broke the spell.",
+  "The view is better if you close your eyes.",
+  "A broken promise is a lesson in disguise.",
+  "The signal is clear; you are just ignoring it.",
+  "A heavy mask tires the neck.",
+  "The rumor is a distraction; watch the left hand.",
+  "A clean window reveals a dirty yard.",
+  "The masterpiece was an accident.",
+  "A sudden flash of lightning changed the plan.",
+  "The fourth option is the safest.",
+  "A wild animal knows your true intent.",
+  "The answer is no, but you will try anyway.",
+  "A cold heart feels no regret.",
+  "The whisper was a warning from your future self.",
+  "A golden opportunity comes with strings attached.",
+  "The riddle is a mirror.",
+  "A dark sky means a beautiful sunrise is coming.",
+  "The logic falls apart under pressure.",
+  "A quiet victory needs no audience.",
+  "The secret is safe with the dead.",
+  "A sudden twist makes the movie better.",
+  "The reflection in the mirror didn't blink.",
+  "A broken wing can still heal.",
+  "The oracle demands a token of sincerity.",
+  "A bitter truth is better than a sweet lie.",
+  "The first cut is deep; the second is numb.",
+  "A small miracle occurred while you slept.",
+  "The stars are mocking your grand plans.",
+  "A closed door is an invite to pick the lock.",
+  "The echo is proof that you are not alone.",
+  "A raw emotion is a dangerous weapon.",
+  "The pattern is too complex for humans.",
+  "A sharp mind can be a lonely place.",
+  "The light is fading; find shelter.",
+  "A quiet heart is an unassailable castle.",
+  "The truth is out there, but it is boring.",
+  "A loose stone caused the avalanche.",
+  "The second half of the book is better.",
+  "A cheap thrill has a high cost.",
+  "The memory is a liar.",
+  "A sudden silence fell over the room.",
+  "The view from the bottom has its perks.",
+  "A broken heart can hold more secrets.",
+  "The signal is jamming; trust your gut.",
+  "A heavy burden builds strong shoulders.",
+  "The rumor is true; the truth is a rumor.",
+  "A clean break is better than a slow fray.",
+  "The masterpiece was destroyed by its creator.",
+  "A sudden change in temperature means a ghost.",
+  "The fifth element is just love, or coffee.",
+  "A wild ride awaits; strap in.",
+  "The answer is maybe, leaning towards absolutely.",
+  "A cold wind blew through the keyhole.",
+  "The whisper told you exactly what to do.",
+  "A golden handshake is a trap.",
+  "The riddle is simpler than you think.",
+  "A dark room makes the light brighter.",
+  "The logic holds, but the human fails.",
+  "A quiet presence is felt from a mile away.",
+  "The secret is that there is no secret.",
+  "A sudden epiphany will hit you at 3 AM.",
+  "The reflection is more real than you.",
+  "A broken chain sets you free.",
+  "The oracle is online but away from keyboard.",
+  "A bitter ending leads to a fresh start.",
+  "The first instinct was correct.",
+  "A small distraction saved your life.",
+  "The stars don't care about your existential dread.",
+  "A closed eye sees the truth.",
+  "The echo is louder than the original shout.",
+  "A raw diamond looks like a common stone.",
+  "The pattern is breaking; welcome the chaos.",
+  "A sharp retort will end the debate.",
+  "The light inside you is flickering; recharge.",
+  "A quiet walk will reveal the solution.",
+  "The truth is relative; gravity is absolute.",
+  "A loose grip ensures you don't lose your hand.",
+  "The third time you ask, the answer changes.",
+  "A wild card is dealt; play it cool.",
+  "The answer is encoded in your daily routine.",
+  "A cold look froze the conversation.",
+  "The whisper was an invitation to misbehave.",
+  "A golden shield won't save a coward.",
+  "The riddle requires a child's mind.",
+  "A dark alley holds a bright shortcut.",
+  "The logic is a cage; step out.",
+  "A quiet gesture spoke volumes.",
+  "The secret is carved into a stone underwater.",
+  "A sudden stroke of luck is coming.",
+  "The reflection shows what you lost.",
+  "A broken bowl can hold beautiful flowers.",
+  "The oracle says: Don't look back.",
+  "A bitter drink cures the fever.",
+  "The first paragraph was a hook; read on.",
+  "A small gesture changed an entire life.",
+  "The stars are neutral; you choose the meaning.",
+  "A closed fist can receive nothing.",
+  "The echo is just the wall talking back.",
+  "A raw talent requires a disciplined hand.",
+  "The pattern is beautiful but deadly.",
+  "A sharp tool makes clean cuts.",
+  "The light is returning slowly.",
+  "A quiet corner is where the truth hides.",
+  "The truth is a luxury you cannot afford.",
+  "A loose nail ruined the whole throne.",
+  "The second chapter reveals the villain.",
+  "A cheap watch still tells the time.",
+  "The memory is a safe haven.",
+  "A sudden burst of energy will pull you through.",
+  "The view from here is spectacular.",
+  "A broken toy still brings joy.",
+  "The signal is loud and clear; act.",
+  "A heavy chest holds trivial things.",
+  "The rumor died a natural death.",
+  "A clean slate is terrifying; write anyway.",
+  "The masterpiece took fifty years to finish.",
+  "A sudden realization will bring tears.",
+  "The sixth sense is just intuition with a coat.",
+  "A wild rumor turned out to be true.",
+  "The answer is a definitive yes, with a catch.",
+  "A cold night makes a warm fire better.",
+  "The whisper in your ear was a warning.",
+  "A golden ring binds more than fingers.",
+  "The riddle is an onion; peel it.",
+  "A dark hour precedes the dawn.",
+  "The logic is impeccable; the result is tragic.",
+  "A quiet river runs deep.",
+  "The secret is known to three people; kill two.",
+  "A sudden turn of events will shock everyone.",
+  "The reflection smiled back; run.",
+  "A broken vase can be a work of art.",
+  "The oracle recommends doing absolutely nothing.",
+  "A bitter pill makes you stronger.",
+  "The first page was missing.",
+  "A small compromise will avert disaster.",
+  "The stars are silent; listen closely.",
+  "A closed heart is a safe prison.",
+  "The echo is a ghost of your voice.",
+  "A raw nerve was touched.",
+  "The pattern is a spiral; you are going down.",
+  "A sharp contrast reveals the truth.",
+  "The light is blinding; put on shades.",
+  "A quiet night brings deep wisdom.",
+  "The truth is a bitter medicine.",
+  "A loose wire caused the short circuit.",
+  "The third book explains everything.",
+  "A cheap suit hides a rich mind.",
+  "The memory is a haunted house.",
+  "A sudden drop in pressure means a storm.",
+  "The view is blocked by your own ego.",
+  "A broken mirror gives a new perspective.",
+  "The signal died; you are on your own.",
+  "A heavy silence is about to break.",
+  "The rumor is a test of your loyalty.",
+  "A clean mirror shows every flaw.",
+  "The masterpiece was painted in pitch black.",
+  "A sudden knock at the door will change everything.",
+  "The seventh son of a seventh son said yes.",
+  "A wild fantasy is about to become reality.",
+  "The answer is no, and don't ask again.",
+  "A cold logic won the argument.",
+  "The whisper was a prompt to jump.",
+  "A golden cage is still comfortable.",
+  "The riddle has no solution; it's a trap.",
+  "A dark corridor leads to a grand hall.",
+  "The logic failed because emotions intervened.",
+  "A quiet word turned away wrath.",
+  "The secret is hidden in plain sight.",
+  "A sudden wave of nostalgia will wash over you.",
+  "The reflection is missing a detail.",
+  "A broken promise can never be truly fixed.",
+  "The oracle is pondering; please stand by.",
+  "A bitter truth is a good anchor.",
+  "The first glance was deceptive.",
+  "A small error led to a grand discovery.",
+  "The stars are blind to your tears.",
+  "A closed door keeps the cold out.",
+  "The echo is an illusion of company.",
+  "A raw ambition can consume you.",
+  "The pattern is a grid; break out.",
+  "A sharp answer cut the argument short.",
+  "The light is shifting; adapt.",
+  "A quiet retreat is not a surrender.",
+  "The truth is a double-edged sword.",
+  "A loose stone on the path; watch your step.",
+  "The fourth verse holds the answer.",
+  "A cheap wine can still make you merry.",
+  "The memory is a warm blanket.",
+  "A sudden flash of inspiration will solve it.",
+  "The view is clear now; move forward.",
+  "A broken instrument can still make noise.",
+  "The signal is looping; stop listening.",
+  "A heavy blanket hides a trembling child.",
+  "The rumor was started by a friend.",
+  "A clean sheet of paper is full of potential.",
+  "The masterpiece is in your head; build it.",
+  "A sudden change of heart will save you.",
+  "The eighth card is the death card; relax, it means change.",
+  "A wild coincidence is just fate playing tag.",
+  "The answer is yes, but you must sacrifice something.",
+  "A cold hand touched your shoulder.",
+  "The whisper was a voice you used to know.",
+  "A golden opportunity is wrapped in hard work.",
+  "The riddle is a test of character.",
+  "A dark sky is perfect for star-gazing.",
+  "The logic is solid; the execution was flawed.",
+  "A quiet life is full of loud thoughts.",
+  "The secret is written on the back of the map.",
+  "A sudden burst of laughter will clear the air.",
+  "The reflection is wearing a different shirt.",
+  "A broken wing means you explore the ground.",
+  "The oracle says: Try turning it off and on again.",
+  "A bitter wind brings a fresh perspective.",
+  "The first step is a cliff; jump anyway.",
+  "A small detail changes the entire equation.",
+  "The stars are writing your name in ice.",
+  "A closed book is just a heavy block of wood.",
+  "The echo is a reminder of your past words.",
+  "A raw deal is an opportunity to cheat back.",
+  "The pattern is a circle; you are back at the start.",
+  "A sharp knife requires a steady grip.",
+  "The light is a beacon; follow it.",
+  "A quiet spot is where ideas bloom.",
+  "The truth is a luxury; lies are inflation.",
+  "A loose connection causes the flicker.",
+  "The fifth seal is broken; act fast.",
+  "A cheap imitation is easily spotted.",
+  "The memory is a curse you chose.",
+  "A sudden clear day after a month of rain.",
+  "The view from the top is worth the sweat.",
+  "A broken lock lets everyone in.",
+  "The signal is coming from inside the house.",
+  "A heavy chain holds a small dog.",
+  "The rumor is completely false, but believable.",
+  "A clean slate means you can rewrite history.",
+  "The masterpiece was carved out of ice.",
+  "A sudden change of venue is recommended.",
+  "The ninth cloud is a soft place to land.",
+  "A wild adventure begins with a wrong turn.",
+  "The answer is no, but your sister says yes.",
+  "A cold truth is better than a lukewarm lie.",
+  "The whisper told you to run for your life.",
+  "A golden coin cannot buy a second of time.",
+  "The riddle is a loop.",
+  "A dark night makes the candle heroic.",
+  "The logic is a maze; you are the mouse.",
+  "A quiet word can stop a war.",
+  "The secret is that everyone else knows too.",
+  "A sudden stroke of genius will hit you in the shower.",
+  "The reflection didn't copy your movement.",
+  "A broken vase holds no water; drop it.",
+  "The oracle is busy playing solitaire.",
+  "A bitter enemy is your best teacher.",
+  "The first page set a dark tone.",
+  "A small gesture of kindness goes a long way.",
+  "The stars are throwing dice for your soul.",
+  "A closed mind is an empty room.",
+  "The echo is your only friend today.",
+  "A raw instinct is never wrong.",
+  "The pattern is a spiderweb; don't move.",
+  "A sharp pencil makes precise plans.",
+  "The light is dying; start the fire.",
+  "A quiet room is where the answers live.",
+  "The truth is too heavy to carry alone.",
+  "A loose tile on the roof; check for leaks.",
+  "The tenth wave is the one that sinks you.",
+  "A cheap ticket to a grand disaster.",
+  "The memory is a masterpiece of fiction.",
+  "A sudden drop in temperature means run.",
+  "The view is perfect; don't ruin it with words.",
+  "A broken heart can bleed into art.",
+  "The signal went cold; search elsewhere.",
+  "A heavy silence precedes the thunder.",
+  "The rumor is old news; forget it.",
+  "A clean cut is better than a ragged tear.",
+  "The masterpiece was stolen by a ghost.",
+  "A sudden change in plans will favor you.",
+  "The zero hour is approaching.",
+  "A wild beast is tamed by silence.",
+  "The answer is yes, if you stop asking.",
+  "A cold rain on a hot day.",
+  "The whisper was a voice from your childhood.",
+  "A golden path is always slippery.",
+  "The riddle is the answer.",
+  "A dark cloud has a silver trim.",
+  "The logic is flawless, but humans are messy.",
+  "A quiet valley holds the echo longest.",
+  "The secret is buried under the old oak tree.",
+  "A sudden shift in gravity; hold on.",
+  "The reflection has a sinister smile.",
+  "A broken bridge forces you to swim.",
+  "The oracle says: Delete your browser history.",
+  "A bitter wind blew the candle out.",
+  "The first impression was a masterpiece of acting.",
+  "A small spark can light up the night.",
+  "The stars are indifferent; make your own luck.",
+  "A closed hand holds nothing but sweat.",
+  "The echo is mocking your uncertainty.",
+  "A raw emotion is a prompt to create.",
+  "The pattern is an illusion; there is no grid.",
+  "A sharp turn is coming; lean in.",
+  "The light is soft; perfect for a nap.",
+  "A quiet walk in the woods will fix it.",
+  "The truth is a joke nobody laughed at.",
+  "A loose brick holds a hidden map.",
+  "The third option was eliminated; pick two.",
+  "A cheap laugh is better than an expensive cry.",
+  "The memory is a shifting dune.",
+  "A sudden burst of clarity will guide you.",
+  "The view from here is dizzying.",
+  "A broken cup can still hold pens.",
+  "The signal is strong; you are just deaf.",
+  "A heavy safe holds an empty envelope.",
+  "The rumor was a marketing strategy.",
+  "A clean page is a blank canvas.",
+  "The masterpiece was an accident of nature.",
+  "A sudden realization will set you free.",
+  "The final countdown has begun.",
+  "A wild card will save your hand.",
+  "The answer is maybe, but don't hold your breath.",
+  "A cold look is more lethal than a bullet.",
+  "The whisper was a directive from the void.",
+  "A golden key opens any door, even a heart.",
+  "The riddle requires you to unlearn everything.",
+  "A dark night is a canvas for fireworks.",
+  "The logic is a trap; walk through the wall.",
+  "A quiet life is an active choice.",
+  "The secret is safe with your mirror.",
+  "A sudden plot twist is unfolding.",
+  "The reflection moved first.",
+  "A broken wings means you learn to run faster.",
+  "The oracle says: Go eat a piece of cake.",
+  "A bitter truth is a solid foundation.",
+  "The first paragraph was a warning.",
+  "A small error can collapse a cathedral.",
+  "The stars are blind; you are the guide.",
+  "A closed door is a challenge accepted.",
+  "The echo is proof that you exist.",
+  "A raw passion cannot be hidden.",
+  "The pattern is a spiral; don't look down.",
+  "A sharp mind cuts through nonsense.",
+  "The light is changing; find your shadow.",
+  "A quiet retreat is a brilliant strategy.",
+  "The truth is a shape-shifter today.",
+  "A loose stone can alter a river's course.",
+  "The second wave is just a ripple; wait.",
+  "A cheap alternative will cost double.",
+  "The memory is a photograph that fades.",
+  "A sudden silence is a sign of respect.",
+  "The view from the gutter is still full of stars.",
+  "A broken lock is an invitation.",
+  "The signal is fading; make your move.",
+  "A heavy burden is an honor.",
+  "The rumor is ninety-nine percent false.",
+  "A clean break is a gift.",
+  "The masterpiece was painted by a blind man.",
+  "A sudden flash of memory will shock you.",
+  "The twelve pillars are trembling.",
+  "A wild animal can smell your hesitation.",
+  "The answer is no, but ask again tomorrow.",
+  "A cold calculated risk is required.",
+  "The whisper was a voice from the future.",
+  "A golden cage is still a cage, break it.",
+  "The riddle is an equation of mirrors.",
+  "A dark sky is a sign of power.",
+  "The logic failed because you forgot the human element.",
+  "A quiet response is the ultimate power move.",
+  "The secret is written in water.",
+  "A sudden change of fortune is near.",
+  "The reflection didn't mimic your expression.",
+  "A broken heart is an open door.",
+  "The oracle is currently charging its batteries.",
+  "A bitter ending is better than a endless tragedy.",
+  "The first choice was a trap; pick the second.",
+  "A small victory is still a victory.",
+  "The stars are whispering your secrets to the moon.",
+  "A closed mind is a dusty room.",
+  "The echo is an invitation to scream louder.",
+  "A raw diamond is still a rock.",
+  "The pattern is breaking; enjoy the freedom.",
+  "A sharp reply will end the conversation.",
+  "The light inside you is blinding; share it.",
+  "A quiet mind can hear the universe.",
+  "The truth is a relative term; reality is harsh.",
+  "A loose knot is easily untied.",
+  "The third time you ask, I will lie.",
+  "A wild card is a dangerous friend.",
+  "The answer is hiding under your nose.",
+  "A cold stare can freeze an empire.",
+  "The whisper was a secret code.",
+  "A golden ring is a circle of trust.",
+  "The riddle can be solved with a smile.",
+  "A dark path leads to a bright horizon.",
+  "The logic is impeccable, but the timing is awful.",
+  "A quiet river carved the canyon.",
+  "The secret is known to everyone but you.",
+  "A sudden insight will strike like lightning.",
+  "The reflection is waiting for you to leave.",
+  "A broken vase can be mended with gold.",
+  "The oracle says: Trust your second thought.",
+  "A bitter pill guarantees a full recovery.",
+  "The first step was a stumble; keep running.",
+  "A small deviation leads to a new continent.",
+  "The stars are mapping your escape.",
+  "A closed fist cannot give or receive.",
+  "The echo is the sound of your own doubt.",
+  "A raw talent is a beautiful chaos.",
+  "The pattern is shifting; don't panic.",
+  "A sharp tool cuts clean lines.",
+  "The light is breaking through the clouds.",
+  "A quiet room is a luxury of the mind.",
+  "The truth is a weapon; use it sparingly.",
+  "A loose screw makes the whole machine rattle."
+];
+
+const SUITS = [
+  { s: '♠', color: 'c-gold' }, { s: '♥', color: 'c-red' },
+  { s: '♣', color: 'c-gold' }, { s: '♦', color: 'c-red' }
+];
+const VALUES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+let audioCtx = null;
+let busy = false;
+let holdTimer = null;
+let isHolding = false;
+let flipOsc = null;
+
+// 低频氛围背景声 (Ambient Drone) 音频节点全局引用
+let droneOsc1 = null, droneOsc2 = null, droneGain = null;
+
+// --- History Storage Logic ---
+const HIST_KEY = 'oracle_cards_history';
+let historyData = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+
+function saveHistory(q, ans, suitObj, val) {
+  const record = {
+    q: q, a: ans, s: suitObj.s, c: suitObj.color, v: val,
+    time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+  };
+  historyData.unshift(record);
+  if(historyData.length > 30) historyData.pop(); 
+  localStorage.setItem(HIST_KEY, JSON.stringify(historyData));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('hist-list');
+  if(historyData.length === 0) {
+    list.innerHTML = '<div class="hist-empty">The archive is empty. Seek a reading first.</div>';
+    return;
+  }
+  
+  list.innerHTML = historyData.map(item => `
+    <div class="hist-item">
+      <div class="hist-card-mini ${item.c}">
+        <span>${item.v}</span>
+        <span style="font-size: 1rem">${item.s}</span>
+      </div>
+      <div class="hist-content">
+        <div class="hist-q">"${esc(item.q)}"</div>
+        <div class="hist-a">${esc(item.a)}</div>
+        <div class="hist-time">${item.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleHistory(show) {
+  document.getElementById('history-panel').classList.toggle('open', show);
+}
+renderHistory();
+
+// --- Audio Logic ---
+function initAudio() {
+  if (audioCtx) return audioCtx;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  audioCtx = new AC();
+  return audioCtx;
+}
+
+// 播放深邃的电影感低频低鸣 (Ambient Drone) - 纯前端代码学合成
+function startAmbientDrone() {
+  const ac = initAudio();
+  if (!ac || droneOsc1) return; // 已激活则不重新建立
+
+  droneOsc1 = ac.createOscillator();
+  droneOsc2 = ac.createOscillator();
+  droneGain = ac.createGain();
+  const lowpass = ac.createBiquadFilter();
+
+  // 双振荡器轻微差频产生拍频，构造厚重神秘感
+  droneOsc1.type = 'sawtooth';
+  droneOsc1.frequency.setValueAtTime(55, ac.currentTime);     // A1基音
+  droneOsc2.type = 'triangle';
+  droneOsc2.frequency.setValueAtTime(55.4, ac.currentTime);   // 微弱频率偏差
+
+  lowpass.type = 'lowpass';
+  lowpass.frequency.setValueAtTime(100, ac.currentTime);      // 深度裁剪高频
+
+  droneGain.gain.setValueAtTime(0, ac.currentTime);
+  
+  droneOsc1.connect(lowpass);
+  droneOsc2.connect(lowpass);
+  lowpass.connect(droneGain);
+  droneGain.connect(ac.destination);
+
+  droneOsc1.start();
+  droneOsc2.start();
+  // 3.5秒深邃淡入
+  droneGain.gain.linearRampToValueAtTime(0.25, ac.currentTime + 3.5);
+}
+
+// 模拟打字机微弱机械噼啪/静电声
+function playTypewriterClick() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  
+  osc.type = 'triangle';
+  // 每次敲击音调轻微随机，增加真实感
+  osc.frequency.setValueAtTime(500 + Math.random() * 300, audioCtx.currentTime);
+  
+  gain.gain.setValueAtTime(0.012, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.02); // 极速衰减
+  
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.03);
+}
+
+function playCardFlicker() {
+    const ac = initAudio(); if(!ac) return;
+    const t = ac.currentTime;
+    flipOsc = ac.createOscillator(); flipOsc.type = 'square'; flipOsc.frequency.setValueAtTime(40, t);
+    const filter = ac.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(100, t); filter.frequency.exponentialRampToValueAtTime(1500, t + 2.0);
+    const lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.setValueAtTime(8, t); lfo.frequency.linearRampToValueAtTime(24, t + 2.0);
+    const lfoGain = ac.createGain(); lfoGain.gain.value = 400; lfo.connect(lfoGain).connect(filter.frequency); lfo.start();
+    const gain = ac.createGain(); gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.3, t + 0.5);
+    flipOsc.connect(filter).connect(gain).connect(ac.destination); flipOsc.start();
+    flipOsc.gainNode = gain; flipOsc.lfoNode = lfo;
+}
+
+function stopCardFlicker() {
+    if(flipOsc && audioCtx) {
+        const t = audioCtx.currentTime;
+        flipOsc.gainNode.gain.cancelScheduledValues(t); flipOsc.gainNode.gain.setValueAtTime(flipOsc.gainNode.gain.value, t); flipOsc.gainNode.gain.linearRampToValueAtTime(0, t + 0.2);
+        setTimeout(() => { if(flipOsc) { flipOsc.stop(); flipOsc.lfoNode.stop(); flipOsc = null; } }, 300);
+    }
+}
+
+function playImpact() {
+  const ac = initAudio(); if(!ac) return;
+  const t = ac.currentTime;
+  const osc = ac.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(120, t); osc.frequency.exponentialRampToValueAtTime(10, t + 0.5);
+  const gain = ac.createGain(); gain.gain.setValueAtTime(1.5, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+  osc.connect(gain).connect(ac.destination); osc.start(); osc.stop(t + 1.2);
+  const dur = 0.05; const buffer = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
+  const data = buffer.getChannelData(0); for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow((1 - i / data.length), 3);
+  const src = ac.createBufferSource(); src.buffer = buffer;
+  const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+  const nzGain = ac.createGain(); nzGain.gain.value = 1.0;
+  src.connect(hp).connect(nzGain).connect(ac.destination); src.start();
+}
+
+// --- 打字机逐字吐出逻辑 ---
+function typeText(element, text, speed = 45, callback) {
+  element.textContent = "";
+  let i = 0;
+  function type() {
+    if (i < text.length) {
+      element.textContent += text.charAt(i);
+      playTypewriterClick();
+      i++;
+      // 加入呼吸节奏级的微弱变速度模拟
+      setTimeout(type, speed + (Math.random() * 20 - 10));
+    } else if (callback) {
+      callback();
+    }
+  }
+  type();
+}
+
+// --- Canvas 能量粒子渲染引擎 ---
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+  constructor(cx, cy, type) {
+    this.x = cx;
+    this.y = cy;
+    this.type = type; // 'hold'（向心吸入）或 'burst'（离心释放）
+    
+    if (type === 'hold') {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 110 + Math.random() * 90;
+      this.x = cx + Math.cos(angle) * dist;
+      this.y = cy + Math.sin(angle) * dist;
+      // 朝向中心轴缩进
+      this.vx = -Math.cos(angle) * (1.6 + Math.random() * 2);
+      this.vy = -Math.sin(angle) * (1.6 + Math.random() * 2);
+      this.size = Math.random() * 2 + 1;
+      this.alpha = 0;
+      this.color = '230, 57, 70'; // 绯红粒子
+    } else {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 3 + Math.random() * 6;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.size = Math.random() * 3.5 + 1;
+      this.alpha = 1;
+      this.decay = 0.015 + Math.random() * 0.02;
+      this.color = '212, 175, 55'; // 金色爆裂粒子
+    }
+  }
+  update(cx, cy) {
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    if (this.type === 'hold') {
+      if (this.alpha < 0.7) this.alpha += 0.05;
+      const dx = this.x - cx;
+      const dy = this.y - cy;
+      if (Math.sqrt(dx*dx + dy*dy) < 12) return false; // 吞噬到按钮中心点时销毁
+    } else {
+      this.vx *= 0.96; // 空气阻力阻尼
+      this.vy *= 0.96;
+      this.alpha -= this.decay;
+    }
+    return this.alpha > 0;
+  }
+  draw() {
+    ctx.fillStyle = `rgba(${this.color}, ${this.alpha})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function spawnHoldParticles(cx, cy) {
+  if (!isHolding) return;
+  for(let i=0; i<3; i++) particles.push(new Particle(cx, cy, 'hold'));
+  requestAnimationFrame(() => {
+    const btn = document.getElementById('hold-wrap');
+    if(btn) {
+      const rect = btn.getBoundingClientRect();
+      spawnHoldParticles(rect.left + rect.width/2, rect.top + rect.height/2);
+    }
+  });
+}
+
+function triggerBurst(cx, cy) {
+  particles = []; // 抽离蓄力粒子
+  for(let i=0; i<75; i++) particles.push(new Particle(cx, cy, 'burst'));
+}
+
+function updateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const btn = document.getElementById('hold-wrap');
+  const rect = btn.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  particles = particles.filter(p => {
+    const keep = p.update(cx, cy);
+    if (keep) p.draw();
+    return keep;
+  });
+  requestAnimationFrame(updateParticles);
+}
+requestAnimationFrame(updateParticles);
+
+// --- 卡片 3D 悬浮微动交互 (带反射眩光层移动) ---
+function initCardTilt(cardElement) {
+  // 变更过渡时长，防止原生 1s 动画与鼠标微调轨迹发生冲突导致卡顿
+  cardElement.style.transition = "transform 0.1s ease-out, box-shadow 0.3s ease";
+  
+  const mouseMoveHandler = (e) => {
+    const rect = cardElement.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xc = rect.width / 2;
+    const yc = rect.height / 2;
+    
+    const rotateX = ((yc - y) / yc) * 12; // 限制在 12° 倾角内
+    const rotateY = ((x - xc) / xc) * 12;
+    
+    cardElement.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    
+    const glare = cardElement.querySelector('.card-glare');
+    if (glare) {
+      const pX = (x / rect.width) * 100;
+      const pY = (y / rect.height) * 100;
+      glare.style.background = `radial-gradient(circle at ${pX}% ${pY}%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 80%)`;
+    }
+  };
+
+  const mouseLeaveHandler = () => {
+    // 丝滑滚回扁平轴心位置
+    cardElement.style.transform = `perspective(2000px) rotateY(0deg) scale(1) translateY(0)`;
+    cardElement.style.transition = "transform 1s cubic-bezier(0.2, 0.8, 0.1, 1)";
+    const glare = cardElement.querySelector('.card-glare');
+    if (glare) glare.style.background = 'none';
+  };
+
+  cardElement.addEventListener('mousemove', mouseMoveHandler);
+  cardElement.addEventListener('mouseleave', mouseLeaveHandler);
+  
+  // 注入销毁钩子，防止下次重绘元素时叠加污染监听器
+  cardElement._tiltCleanup = () => {
+    cardElement.removeEventListener('mousemove', mouseMoveHandler);
+    cardElement.removeEventListener('mouseleave', mouseLeaveHandler);
+  };
+}
+
+// --- 命运卡片高清截图分享 ---
+function exportCard(e) {
+  if (e) e.stopPropagation(); // 阻止点击冒泡触发外部 closeResult 容器行为
+  
+  const card = document.getElementById('res-card');
+  const shareBtn = document.getElementById('share-btn');
+  
+  // 备份并移出所有的 3D 旋转及倾斜度属性，规避 html2canvas 的透视渲染形变 Bug
+  const origTransform = card.style.transform;
+  const origTransition = card.style.transition;
+  card.style.transform = 'none';
+  card.style.transition = 'none';
+  shareBtn.style.opacity = '0'; // 拍照时隐藏自身组件
+
+  setTimeout(() => {
+    html2canvas(card, {
+      backgroundColor: '#0d0d10',
+      scale: 2, // 2倍物理像素清晰度
+      useCORS: true,
+      logging: false
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `ORACLE_DESTINY_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+      // 复原状态
+      card.style.transform = origTransform;
+      card.style.transition = origTransition;
+      shareBtn.style.opacity = '1';
+    });
+  }, 50);
+}
+
+// --- Interaction Logic ---
+function startHold(e) {
+  if (e.type === 'touchstart' && e.cancelable) e.preventDefault();
+  if (busy || isHolding) return;
+  
+  const qInp = document.getElementById('q-inp');
+  const qVal = qInp.value.trim();
+  
+  if(!qVal) {
+    qInp.classList.remove('error-shake');
+    void qInp.offsetWidth; 
+    qInp.classList.add('error-shake');
+    qInp.focus();
+    return;
+  }
+
+  isHolding = true;
+  document.getElementById('hold-wrap').classList.add('holding');
+
+  const ac = initAudio();
+  if(ac && ac.state === 'suspended') ac.resume();
+
+  // 【新联动】触发低频电影感Drone嗡鸣声
+  startAmbientDrone();
+  
+  // 【新联动】捕捉长按中心发射微观烟雾烟火粒子
+  const btnRect = document.getElementById('hold-wrap').getBoundingClientRect();
+  spawnHoldParticles(btnRect.left + btnRect.width/2, btnRect.top + btnRect.height/2);
+
+  playCardFlicker();
+
+  if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 30]);
+
+  holdTimer = setTimeout(() => {
+    completeHold();
+  }, 2000); 
+}
+
+function cancelHold(e) {
+  if (!isHolding) return;
+  isHolding = false;
+  document.getElementById('hold-wrap').classList.remove('holding');
+  clearTimeout(holdTimer);
+  stopCardFlicker();
+}
+
+function completeHold() {
+  if (!isHolding) return;
+  isHolding = false;
+  busy = true;
+  document.getElementById('hold-wrap').classList.remove('holding');
+  
+  if (navigator.vibrate) navigator.vibrate([150, 50, 200]);
+
+  // 【新联动】在按压位置中心轰出冲击波粒子
+  const btnRect = document.getElementById('hold-wrap').getBoundingClientRect();
+  triggerBurst(btnRect.left + btnRect.width/2, btnRect.top + btnRect.height/2);
+
+  stopCardFlicker();
+  playImpact();
+  flashScreen();
+  
+  setTimeout(() => {
+    showResult();
+  }, 100);
+}
+
+function flashScreen() {
+    const f = document.getElementById('flash');
+    f.classList.remove('active');
+    void f.offsetWidth;
+    f.classList.add('active');
+}
+
+function showResult() {
+  const q = document.getElementById('q-inp').value.trim();
+  const ans = A_EN[Math.floor(Math.random() * A_EN.length)];
+  
+  const s = SUITS[Math.floor(Math.random() * SUITS.length)];
+  const v = VALUES[Math.floor(Math.random() * VALUES.length)];
+
+  saveHistory(q, ans, s, v);
+
+  const front = document.querySelector('.r-front');
+  // 注入卡片结构并同时内置 .card-glare 眩光容器
+  front.innerHTML = `
+    <div class="c-suit-top ${s.color}"><span class="suit-val">${v}</span><span class="suit-icon">${s.s}</span></div>
+    <div class="ans-container">
+      <div class="bg-suit ${s.color}">${s.s}</div>
+      ${q ? `<div class="ans-q">"${esc(q)}"</div>` : ''}
+      <div class="ans-txt" id="ans-text"></div>
+    </div>
+    <div class="c-suit-bot ${s.color}"><span class="suit-val">${v}</span><span class="suit-icon">${s.s}</span></div>
+    <div class="card-glare"></div>
+  `;
+
+  document.getElementById('result-wrap').classList.add('on');
+
+  // 【新联动】卡片翻转铺开后启动打字机文字吐出效果
+  const textContainer = document.getElementById('ans-text');
+  setTimeout(() => {
+    typeText(textContainer, ans, 45, () => {
+      // 文本完全吐码完毕后释放busy锁，初始化3D卡片倾斜并平滑显示导出按钮
+      busy = false;
+      initCardTilt(document.getElementById('res-card'));
+      document.getElementById('share-btn').classList.add('show');
+    });
+  }, 600); // 等待卡片基础翻转转场结束
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function closeResult() {
+  const wrap = document.getElementById('result-wrap');
+  const card = document.getElementById('res-card');
+  
+  // 清理可能绑定在残余节点上的 3D 悬浮监听事件
+  if(card._tiltCleanup) card._tiltCleanup();
+  
+  wrap.classList.remove('on');
+  document.getElementById('share-btn').classList.remove('show');
+
+  setTimeout(() => {
+    document.getElementById('q-inp').value = '';
+    document.querySelector('.r-front').innerHTML = '';
+    // 恢复重置卡片的变形样式
+    card.style.transform = '';
+    card.style.transition = '';
+    busy = false;
+  }, 600);
+}
+
+document.getElementById('q-inp').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { 
+      e.preventDefault(); 
+      document.querySelector('.hold-btn').innerText = "HOLD";
+      setTimeout(()=>document.querySelector('.hold-btn').innerHTML = "PRESS", 2000);
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeResult(); });
+</script>
+</body>
+</html>
